@@ -48,12 +48,28 @@ Vue.component('lms-dstm-dialog', {
                 lmsCommand(this.$store.state.player.id, ["dontstopthemusicsetting"]).then(({data}) => {
                     if (data.result && data.result.item_loop) {
                         this.items=[];
+                        let selectedIndex=-1;
                         for (let i=0, loop=data.result.item_loop, len=loop.length; i<len; ++i) {
                             if (loop[i].actions && loop[i].actions.do && loop[i].actions.do.cmd) {
                                 this.items.push({key: loop[i].actions.do.cmd[2], label:loop[i].text, selected:1===loop[i].radio});
+                                if (1===loop[i].radio) {
+                                    selectedIndex = i;
+                                }
                             }
                         }
-                        this.show=true;
+                        if (this.$store.state.sugarCubePlugin) {
+                            lmsCommand(this.$store.state.player.id, ["playerpref", "plugin.SugarCube:sugarcube_status", "?"]).then(({data}) => {
+                                let scEnabled = data && data.result && undefined!=data.result._p2 && 1==parseInt(data.result._p2);
+                                if (scEnabled && selectedIndex>=0) { // De-select DSTM entry...
+                                    this.items[selectedIndex].selected=false;
+                                }
+                                this.items.push({key: LMS_DSTM_SUGARCUBE, label:'SugarCube', selected:scEnabled});
+                            });
+                            this.show=true;
+                            this.items.sort(dstmSort)
+                        } else {
+                            this.show=true;
+                        }
                     }
                 });
             }

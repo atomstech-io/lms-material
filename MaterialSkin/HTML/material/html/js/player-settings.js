@@ -340,6 +340,17 @@ Vue.component('lms-player-settings', {
                                 }
                             }
                         }
+
+                        if (this.$store.state.sugarCubePlugin) {
+                            lmsCommand(this.playerId, ["playerpref", "plugin.SugarCube:sugarcube_status", "?"]).then(({data}) => {
+                                let scEnabled = data && data.result && undefined!=data.result._p2 && 1==parseInt(data.result._p2);
+                                if (scEnabled) {
+                                    this.dstm = LMS_DSTM_SUGARCUBE;
+                                }
+                                this.dstmItems.push({key: LMS_DSTM_SUGARCUBE, label:'SugarCube', selected:scEnabled});
+                                this.dstmItems.sort(dstmSort);
+                            });
+                        }
                     }
                 });
             }

@@ -332,6 +332,24 @@ function homeScreenSort(a, b) {
     return at<bt ? -1 : 1;
 }
 
+function dstmSort(a, b) {
+    if (0==a.key) {
+        return -1;
+    }
+    if (0==b.key) {
+        return 1;
+    }
+    var labelA = a.label.toLowerCase();
+    var labelB = b.label.toLowerCase();
+    if (labelA < labelB) {
+        return -1;
+    }
+    if (labelA > labelB) {
+        return 1;
+    }
+    return 0;
+}
+
 function setScrollTop(el, val) {
     // When using RecycleScroller we need to wait for the next animation frame to scroll, so
     // just do this for all scrolls.

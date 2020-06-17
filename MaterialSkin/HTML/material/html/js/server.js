@@ -475,8 +475,8 @@ var lmsServer = Vue.component('lms-server', {
                 return;
             }
             logCometdMessage("PLAYERPREFS ("+playerId+")", data);
-            if (data[1]=="plugin.dontstopthemusic" && data[2]=="provider") {
-                bus.$emit("prefset", data[1]+":"+data[2], data[3], playerId);
+            if ( (data[1]=="plugin.SugarCube" && data[2]=="sugarcube_status") || (data[1]=="plugin.dontstopthemusic" && data[2]=="provider") ) {
+                this.getPlayerDstm(playerId);
             } else if (data[1]=="plugin.material-skin") {
                 if (data[2]=="composergenres") {
                     var genres = splitString(data[3].split("\r").join("").split("\n").join(","));
@@ -491,14 +491,30 @@ var lmsServer = Vue.component('lms-server', {
                 }
             }
         },
-        getPlayerPrefs() {
-            bus.$emit("prefset", "plugin.dontstopthemusic:provider", 0, this.$store.state.player.id); // reset
+        getPlayerDstm() {
             if (this.$store.state.dstmPlugin && this.$store.state.player) {
-                lmsCommand(this.$store.state.player.id, ["playerpref", "plugin.dontstopthemusic:provider", "?"]).then(({data}) => {
-                    if (data && data.result && undefined!=data.result._p2) {
-                        bus.$emit("prefset", "plugin.dontstopthemusic:provider", data.result._p2, this.$store.state.player.id);
-                    }
-                });
+                bus.$emit("prefset", "plugin.dontstopthemusic:provider", 0, this.$store.state.player.id); // reset
+                if (this.$store.state.sugarCubePlugin) {
+                    // SugarCube plugin installed, see if it is enabled for this player...
+                    lmsCommand(this.$store.state.player.id, ["playerpref", "plugin.SugarCube:sugarcube_status", "?"]).then(({data}) => {
+                        if (!data || !data.result || undefined==data.result._p2 || 0==parseInt(data.result._p2)) {
+                            // SugarCube not enabled, so check DSTM
+                            lmsCommand(this.$store.state.player.id, ["playerpref", "plugin.dontstopthemusic:provider", "?"]).then(({data}) => {
+                                if (data && data.result && undefined!=data.result._p2) {
+                                    bus.$emit("prefset", "plugin.dontstopthemusic:provider", data.result._p2, this.$store.state.player.id);
+                                }
+                            });
+                        } else {
+                            bus.$emit("prefset", "plugin.dontstopthemusic:provider", LMS_DSTM_SUGARCUBE, this.$store.state.player.id);
+                        }
+                    });
+                } else {
+                    lmsCommand(this.$store.state.player.id, ["playerpref", "plugin.dontstopthemusic:provider", "?"]).then(({data}) => {
+                        if (data && data.result && undefined!=data.result._p2) {
+                            bus.$emit("prefset", "plugin.dontstopthemusic:provider", data.result._p2, this.$store.state.player.id);
+                        }
+                    });
+                }
             }
         },
         handleServerPrefs(data) {
@@ -591,7 +607,7 @@ var lmsServer = Vue.component('lms-server', {
             } else {
                 this.updateCurrentPlayer();
             }
-            this.getPlayerPrefs();
+            this.getPlayerDstm(this.$store.state.player.id);
         },
         refreshServerStatus() {
             lmsCommand("", ["serverstatus", 0, LMS_MAX_PLAYERS]).then(({data}) => {
@@ -807,17 +823,25 @@ var lmsServer = Vue.component('lms-server', {
 
         // Set DSTM. If player is synced, then set for all others in sync group...
         bus.$on('dstm', function(player, value) {
+            let cmd = value==LMS_DSTM_SUGARCUBE ? ["playerpref", "plugin.SugarCube:sugarcube_status", 1] : ["playerpref", "plugin.dontstopthemusic:provider", value];
+            let disableScCmd = value!=LMS_DSTM_SUGARCUBE && this.$store.state.sugarCubePlugin ? ["playerpref", "plugin.SugarCube:sugarcube_status", 0] : undefined;
             lmsCommand(player, ["status", "-", 1, PLAYER_STATUS_TAGS + (this.$store.state.ratingsSupport ? "R" : "")]).then(({data}) => {
                 if (data && data.result) {
                     if (data.result.sync_master && data.result.sync_master!=player) {
-                        lmsCommand(data.result.sync_master, ["playerpref", "plugin.dontstopthemusic:provider", value]).then(({data}) => {
+                        lmsCommand(data.result.sync_master, cmd).then(({data}) => {
+                            if (undefined!=disableScCmd) {
+                                lmsCommand(data.result.sync_master, disableScCmd);
+                            }
                             bus.$emit("prefset", "plugin.dontstopthemusic:provider", value, data.result.sync_master);
                         });
                     }
                     if (data.result.sync_slaves) {
                         for (let i=0, loop=data.result.sync_slaves.split(","), len=loop.length; i<len; ++i) {
                             if (loop[i]!=player && loop[i]!=data.result.sync_master) {
-                                lmsCommand(loop[i], ["playerpref", "plugin.dontstopthemusic:provider", value]).then(({data}) => {
+                                lmsCommand(loop[i], cmd).then(({data}) => {
+                                    if (undefined!=disableScCmd) {
+                                        lmsCommand(loop[i], disableScCmd);
+                                    }
                                     bus.$emit("prefset", "plugin.dontstopthemusic:provider", value, loop[i]);
                                 });
                             }
@@ -825,7 +849,10 @@ var lmsServer = Vue.component('lms-server', {
                     }
                     this.handlePlayerStatus(player, data.result, true);
                 }
-                lmsCommand(player, ["playerpref", "plugin.dontstopthemusic:provider", value]).then(({data}) => {
+                lmsCommand(player, cmd).then(({data}) => {
+                    if (undefined!=disableScCmd) {
+                        lmsCommand(player, disableScCmd);
+                    }
                     bus.$emit("prefset", "plugin.dontstopthemusic:provider", value, player);
                 });
             });

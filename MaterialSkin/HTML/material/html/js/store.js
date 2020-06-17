@@ -230,6 +230,7 @@ const store = new Vuex.Store({
         library: null,
         infoPlugin: false,
         dstmPlugin: false,
+        sugarCubePlugin: false,
         stopButton: false,
         browseBackdrop: true,
         queueBackdrop: true,
@@ -413,6 +414,7 @@ const store = new Vuex.Store({
             state.infoPlugin = getLocalStorageBool('infoPlugin', state.infoPlugin);
             lmsOptions.infoPlugin = state.infoPlugin;
             state.dstmPlugin = getLocalStorageBool('dstmPlugin', state.dstmPlugin);
+            state.sugarCubePlugin = getLocalStorageBool('sugarCubePlugin', state.sugarCubePlugin);
             state.stopButton = getLocalStorageBool('stopButton', state.stopButton);
             state.browseBackdrop = getLocalStorageBool('browseBackdrop', state.browseBackdrop);
             state.queueBackdrop = getLocalStorageBool('queueBackdrop', state.queueBackdrop);
@@ -500,6 +502,14 @@ const store = new Vuex.Store({
             }).catch(err => {
                 state.dstmPlugin = false;
                 setLocalStorageVal('dstmPlugin', state.dstmPlugin);
+            });
+            // Spicefly SugarCube installed?
+            lmsCommand("", ["pref", "plugin.state:SugarCube", "?"]).then(({data}) => {
+                state.sugarCubePlugin = data && data.result && data.result._p2 && "disabled"!=data.result._p2;
+                setLocalStorageVal('sugarCubePlugin', state.sugarCubePlugin);
+            }).catch(err => {
+                state.sugarCubePlugin = false;
+                setLocalStorageVal('sugarCubePlugin', state.sugarCubePlugin);
             });
 
             var pass = getLocalStorageVal('password', '-');
