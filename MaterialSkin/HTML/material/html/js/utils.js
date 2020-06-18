@@ -926,3 +926,11 @@ function formatTrackNum(item) {
     let d = item.disccount && item.disc && parseInt(item.disccount)>1 ? parseInt(item.disc) : undefined;
     return (undefined==d ? "" : (d+SEPARATOR)) + (t>9 ? t : ("0" + t));
 }
+
+function copyTextToClipboard(text) {
+    if (!navigator.clipboard) {
+        fallbackCopyTextToClipboard(text);
+        return;
+    }
+    navigator.clipboard.writeText(text);
+}

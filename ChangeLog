@@ -6,6 +6,8 @@
 4. List players on mysqueezebox.com
 5. Simplify moving code to move player from other server, only need to issue
    'disconnect' command.
+6. Add 'Copy details' to now-playing context menu - places "Playing SONG by
+   ARTIST from ALBUM" onto clipboard.
 
 1.8.2
 -----
